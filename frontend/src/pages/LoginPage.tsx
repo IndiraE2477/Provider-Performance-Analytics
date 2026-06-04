@@ -1,110 +1,149 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { MdLock, MdPerson } from 'react-icons/md';
-import { toast } from 'react-toastify';
-import { useAuth } from '../context/AuthContext';
-import { authService } from '../services/authService';
+import React from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { MdLock, MdEmail } from "react-icons/md";
+import { toast } from "react-toastify";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { useAppDispatch, useAppSelector } from "../store";
+import { loginAsync, selectAuth } from "../store/slices/authSlice";
+
+const loginSchema = Yup.object({
+  email: Yup.string()
+    .trim()
+    .required("Email is required")
+    .email("Invalid email address"),
+  password: Yup.string()
+    .required("Password is required")
+    .min(6, "Password must be at least 6 characters"),
+});
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
-  const { login } = useAuth();
+  const dispatch = useAppDispatch();
+  const { loading } = useAppSelector(selectAuth);
   const navigate = useNavigate();
 
-  const validate = (): boolean => {
-    const newErrors: { username?: string; password?: string } = {};
-    if (!username.trim()) newErrors.username = 'Username is required';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    setLoading(true);
-    try {
-      const response = await authService.login({ username, password });
-      login(response.token, response.username, response.fullName, response.role, response.providerId);
-      toast.success(`Welcome back, ${response.fullName}!`);
-      navigate('/dashboard');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed. Please try again.';
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const formik = useFormik({
+    initialValues: { email: "", password: "" },
+    validationSchema: loginSchema,
+    validateOnMount: true,
+    onSubmit: async (values) => {
+      const result = await dispatch(loginAsync(values));
+      if (loginAsync.fulfilled.match(result)) {
+        toast.success(`Welcome back, ${result.payload.fullName}!`);
+        navigate("/dashboard");
+      } else {
+        toast.error(
+          (result.payload as string) || "Login failed. Please try again.",
+        );
+      }
+    },
+  });
 
   return (
     <div className="login-page">
       <div className="login-card">
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-          }}>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+            }}
+          >
             <MdLock size={28} color="#fff" />
           </div>
         </div>
         <h1>Provider Performance</h1>
         <p className="subtitle">Analytics Dashboard</p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={formik.handleSubmit}>
           <div className="form-group">
-            <label htmlFor="username">
-              <MdPerson style={{ verticalAlign: 'middle', marginRight: 6 }} />
-              Username
+            <label htmlFor="email">
+              <MdEmail />
+              Email <span className="required-mark">*</span>
             </label>
             <input
-              id="username"
-              type="text"
-              className={`form-control ${errors.username ? 'error' : ''}`}
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
+              id="email"
+              type="email"
+              className={`form-control ${formik.touched.email && formik.errors.email ? "error" : ""}`}
+              placeholder="Enter your email"
+              {...formik.getFieldProps("email")}
+              autoComplete="email"
             />
-            {errors.username && <span className="error-text">{errors.username}</span>}
+            {formik.touched.email && formik.errors.email && (
+              <span className="error-text">{formik.errors.email}</span>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="password">
-              <MdLock style={{ verticalAlign: 'middle', marginRight: 6 }} />
-              Password
+              <MdLock />
+              Password <span className="required-mark">*</span>
             </label>
             <input
               id="password"
               type="password"
-              className={`form-control ${errors.password ? 'error' : ''}`}
+              className={`form-control ${formik.touched.password && formik.errors.password ? "error" : ""}`}
               placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...formik.getFieldProps("password")}
               autoComplete="current-password"
             />
-            {errors.password && <span className="error-text">{errors.password}</span>}
+            {formik.touched.password && formik.errors.password && (
+              <span className="error-text">{formik.errors.password}</span>
+            )}
           </div>
 
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={!formik.isValid || loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: 13, color: '#64748b' }}>
-          <strong>Demo Credentials:</strong><br />
-          Admin: admin / Admin@123<br />
-          Manager: manager / Admin@123<br />
-          Viewer: viewer / Admin@123
-        </div>
+        {/* <div
+          style={{
+            marginTop: 24,
+            padding: 16,
+            background: "#f8fafc",
+            borderRadius: 8,
+            fontSize: 13,
+            color: "#64748b",
+          }}
+        >
+          <strong>Demo Credentials:</strong>
+          <br />
+          Admin: admin@provideranalytics.com / Admin@123
+          <br />
+          Manager: manager@provideranalytics.com / Admin@123
+          <br />
+          Viewer: viewer@provideranalytics.com / Admin@123
+        </div> */}
 
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#64748b' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}>
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: 20,
+            fontSize: 14,
+            color: "#64748b",
+          }}
+        >
+          Don't have an account?{" "}
+          <Link
+            to="/register"
+            style={{
+              color: "#4f46e5",
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
             Register here
           </Link>
         </p>

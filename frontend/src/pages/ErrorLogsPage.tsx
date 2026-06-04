@@ -22,7 +22,7 @@ const ErrorLogsPage: React.FC = () => {
     <div>
       <div className="page-header">
         <h1>
-          <MdError style={{ verticalAlign: "middle", marginRight: 8 }} />
+          <MdError />
           Error Logs
         </h1>
       </div>

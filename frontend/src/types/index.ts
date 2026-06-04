@@ -1,5 +1,5 @@
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -261,4 +261,62 @@ export interface ChangePassword {
   currentPassword: string;
   newPassword: string;
   confirmNewPassword: string;
+}
+
+// AI Types
+export interface RiskPrediction {
+  providerId: number;
+  providerName: string;
+  riskLevel: string;
+  riskProbability: number;
+  recommendation: string;
+  riskFactors: string[];
+  predictedAt: string;
+}
+
+export interface PerformanceSummary {
+  providerId: number;
+  providerName: string;
+  summary: string;
+  strengths: string[];
+  areasForImprovement: string[];
+  trendDirection: string;
+  generatedAt: string;
+}
+
+export interface DashboardInsight {
+  insightType: string;
+  title: string;
+  description: string;
+  severity: string;
+  generatedAt: string;
+}
+
+export interface ErrorLogAnalysis {
+  pattern: string;
+  occurrences: number;
+  rootCause: string;
+  suggestion: string;
+  severity: string;
+  affectedErrorIds: number[];
+}
+
+export interface AiAssistantRequest {
+  question: string;
+}
+
+export interface AiAssistantResponse {
+  answer: string;
+  questionType: string;
+  data: unknown;
+  respondedAt: string;
+}
+
+export interface AiRecommendation {
+  providerId: number;
+  providerName: string;
+  action: string;
+  reason: string;
+  priority: string;
+  generatedAt: string;
 }

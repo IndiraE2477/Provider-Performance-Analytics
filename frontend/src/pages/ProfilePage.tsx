@@ -2,37 +2,42 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MdPerson, MdEdit, MdLock, MdSave } from "react-icons/md";
 import { toast } from "react-toastify";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { profileService } from "../services/profileService";
-import { useAuth } from "../context/AuthContext";
+import { useAppSelector } from "../store";
+import { selectAuth } from "../store/slices/authSlice";
 import type { UpdateProfile, ChangePassword } from "../types";
+
+const profileSchema = Yup.object({
+  fullName: Yup.string().trim().required("Full name is required"),
+  email: Yup.string()
+    .trim()
+    .required("Email is required")
+    .email("Invalid email address"),
+});
+
+const passwordSchema = Yup.object({
+  currentPassword: Yup.string().required("Current password is required"),
+  newPassword: Yup.string()
+    .required("New password is required")
+    .min(6, "Password must be at least 6 characters"),
+  confirmNewPassword: Yup.string()
+    .required("Please confirm your new password")
+    .oneOf([Yup.ref("newPassword")], "New passwords do not match"),
+});
 
 const ProfilePage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { fullName: authFullName } = useAuth();
+  const { fullName: authFullName } = useAppSelector(selectAuth);
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-
-  const [profileForm, setProfileForm] = useState<UpdateProfile>({
-    fullName: "",
-    email: "",
-  });
-  const [passwordForm, setPasswordForm] = useState<ChangePassword>({
-    currentPassword: "",
-    newPassword: "",
-    confirmNewPassword: "",
-  });
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: profileService.getProfile,
     staleTime: 30000,
   });
-
-  useEffect(() => {
-    if (profile && !isEditing) {
-      setProfileForm({ fullName: profile.fullName, email: profile.email });
-    }
-  }, [profile, isEditing]);
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdateProfile) => profileService.updateProfile(data),
@@ -51,34 +56,44 @@ const ProfilePage: React.FC = () => {
     onSuccess: () => {
       toast.success("Password changed successfully");
       setShowPasswordForm(false);
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmNewPassword: "",
-      });
+      passwordFormik.resetForm();
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to change password");
     },
   });
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMutation.mutate(profileForm);
-  };
+  const profileFormik = useFormik({
+    initialValues: { fullName: "", email: "" },
+    validationSchema: profileSchema,
+    enableReinitialize: true,
+    validateOnMount: true,
+    onSubmit: (values) => {
+      updateMutation.mutate(values);
+    },
+  });
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
-      toast.error("New passwords do not match");
-      return;
+  const passwordFormik = useFormik({
+    initialValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    },
+    validationSchema: passwordSchema,
+    validateOnMount: true,
+    onSubmit: (values) => {
+      passwordMutation.mutate(values);
+    },
+  });
+
+  useEffect(() => {
+    if (profile && !isEditing) {
+      profileFormik.setValues({
+        fullName: profile.fullName,
+        email: profile.email,
+      });
     }
-    if (passwordForm.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-    passwordMutation.mutate(passwordForm);
-  };
+  }, [profile, isEditing]);
 
   if (isLoading) {
     return (
@@ -106,7 +121,7 @@ const ProfilePage: React.FC = () => {
     <div>
       <div className="page-header">
         <h1>
-          <MdPerson style={{ verticalAlign: "middle", marginRight: 8 }} />
+          <MdPerson />
           My Profile
         </h1>
       </div>
@@ -146,38 +161,45 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {isEditing ? (
-            <form onSubmit={handleProfileSubmit}>
+            <form onSubmit={profileFormik.handleSubmit}>
               <div className="form-group">
-                <label>Full Name</label>
+                <label>
+                  Full Name <span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
-                  className="form-control"
-                  value={profileForm.fullName}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, fullName: e.target.value })
-                  }
-                  required
+                  className={`form-control ${profileFormik.touched.fullName && profileFormik.errors.fullName ? "error" : ""}`}
+                  {...profileFormik.getFieldProps("fullName")}
                 />
+                {profileFormik.touched.fullName &&
+                  profileFormik.errors.fullName && (
+                    <span className="error-text">
+                      {profileFormik.errors.fullName}
+                    </span>
+                  )}
               </div>
               <div className="form-group">
-                <label>Email</label>
+                <label>
+                  Email <span className="required-mark">*</span>
+                </label>
                 <input
                   type="email"
-                  className="form-control"
-                  value={profileForm.email}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, email: e.target.value })
-                  }
-                  required
+                  className={`form-control ${profileFormik.touched.email && profileFormik.errors.email ? "error" : ""}`}
+                  {...profileFormik.getFieldProps("email")}
                 />
+                {profileFormik.touched.email && profileFormik.errors.email && (
+                  <span className="error-text">
+                    {profileFormik.errors.email}
+                  </span>
+                )}
               </div>
               <div style={{ display: "flex", gap: 12 }}>
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={updateMutation.isPending}
+                  disabled={!profileFormik.isValid || updateMutation.isPending}
                 >
-                  <MdSave style={{ verticalAlign: "middle", marginRight: 4 }} />
+                  <MdSave />
                   {updateMutation.isPending ? "Saving..." : "Save"}
                 </button>
                 <button
@@ -185,7 +207,7 @@ const ProfilePage: React.FC = () => {
                   className="btn btn-secondary"
                   onClick={() => {
                     setIsEditing(false);
-                    setProfileForm({
+                    profileFormik.setValues({
                       fullName: profile.fullName,
                       email: profile.email,
                     });
@@ -242,8 +264,7 @@ const ProfilePage: React.FC = () => {
                 style={{ marginTop: 20 }}
                 onClick={() => setIsEditing(true)}
               >
-                <MdEdit style={{ verticalAlign: "middle", marginRight: 4 }} />{" "}
-                Edit Profile
+                <MdEdit /> Edit Profile
               </button>
             </>
           )}
@@ -251,64 +272,67 @@ const ProfilePage: React.FC = () => {
 
         <div className="chart-card">
           <h3 style={{ marginBottom: 16 }}>
-            <MdLock style={{ verticalAlign: "middle", marginRight: 8 }} />
+            <MdLock />
             Change Password
           </h3>
 
           {showPasswordForm ? (
-            <form onSubmit={handlePasswordSubmit}>
+            <form onSubmit={passwordFormik.handleSubmit}>
               <div className="form-group">
-                <label>Current Password</label>
+                <label>
+                  Current Password <span className="required-mark">*</span>
+                </label>
                 <input
                   type="password"
-                  className="form-control"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      currentPassword: e.target.value,
-                    })
-                  }
-                  required
+                  className={`form-control ${passwordFormik.touched.currentPassword && passwordFormik.errors.currentPassword ? "error" : ""}`}
+                  {...passwordFormik.getFieldProps("currentPassword")}
                 />
+                {passwordFormik.touched.currentPassword &&
+                  passwordFormik.errors.currentPassword && (
+                    <span className="error-text">
+                      {passwordFormik.errors.currentPassword}
+                    </span>
+                  )}
               </div>
               <div className="form-group">
-                <label>New Password</label>
+                <label>
+                  New Password <span className="required-mark">*</span>
+                </label>
                 <input
                   type="password"
-                  className="form-control"
-                  value={passwordForm.newPassword}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      newPassword: e.target.value,
-                    })
-                  }
-                  required
-                  minLength={6}
+                  className={`form-control ${passwordFormik.touched.newPassword && passwordFormik.errors.newPassword ? "error" : ""}`}
+                  {...passwordFormik.getFieldProps("newPassword")}
                 />
+                {passwordFormik.touched.newPassword &&
+                  passwordFormik.errors.newPassword && (
+                    <span className="error-text">
+                      {passwordFormik.errors.newPassword}
+                    </span>
+                  )}
               </div>
               <div className="form-group">
-                <label>Confirm New Password</label>
+                <label>
+                  Confirm New Password <span className="required-mark">*</span>
+                </label>
                 <input
                   type="password"
-                  className="form-control"
-                  value={passwordForm.confirmNewPassword}
-                  onChange={(e) =>
-                    setPasswordForm({
-                      ...passwordForm,
-                      confirmNewPassword: e.target.value,
-                    })
-                  }
-                  required
-                  minLength={6}
+                  className={`form-control ${passwordFormik.touched.confirmNewPassword && passwordFormik.errors.confirmNewPassword ? "error" : ""}`}
+                  {...passwordFormik.getFieldProps("confirmNewPassword")}
                 />
+                {passwordFormik.touched.confirmNewPassword &&
+                  passwordFormik.errors.confirmNewPassword && (
+                    <span className="error-text">
+                      {passwordFormik.errors.confirmNewPassword}
+                    </span>
+                  )}
               </div>
               <div style={{ display: "flex", gap: 12 }}>
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={passwordMutation.isPending}
+                  disabled={
+                    !passwordFormik.isValid || passwordMutation.isPending
+                  }
                 >
                   {passwordMutation.isPending
                     ? "Changing..."
@@ -319,11 +343,7 @@ const ProfilePage: React.FC = () => {
                   className="btn btn-secondary"
                   onClick={() => {
                     setShowPasswordForm(false);
-                    setPasswordForm({
-                      currentPassword: "",
-                      newPassword: "",
-                      confirmNewPassword: "",
-                    });
+                    passwordFormik.resetForm();
                   }}
                 >
                   Cancel
@@ -339,8 +359,7 @@ const ProfilePage: React.FC = () => {
                 className="btn btn-secondary"
                 onClick={() => setShowPasswordForm(true)}
               >
-                <MdLock style={{ verticalAlign: "middle", marginRight: 4 }} />{" "}
-                Change Password
+                <MdLock /> Change Password
               </button>
             </div>
           )}

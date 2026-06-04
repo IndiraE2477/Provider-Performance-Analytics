@@ -42,6 +42,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IErrorLogService, ErrorLogService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddHttpClient<IAiService, AiService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 

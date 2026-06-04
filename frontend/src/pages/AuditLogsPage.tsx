@@ -22,9 +22,7 @@ const AuditLogsPage: React.FC = () => {
     <div>
       <div className="page-header">
         <h1>
-          <MdAdminPanelSettings
-            style={{ verticalAlign: "middle", marginRight: 8 }}
-          />
+          <MdAdminPanelSettings />
           Audit Logs
         </h1>
       </div>

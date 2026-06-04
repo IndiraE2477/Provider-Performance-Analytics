@@ -1,6 +1,6 @@
 namespace ProviderAnalytics.API.DTOs;
 
-public record LoginRequestDto(string Username, string Password);
+public record LoginRequestDto(string Email, string Password);
 
 public record RegisterRequestDto(string Username, string Email, string FullName, string Password, string ConfirmPassword, int RoleId, int? ProviderId = null);
 

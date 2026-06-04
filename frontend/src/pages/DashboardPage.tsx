@@ -35,7 +35,8 @@ import {
   MdLocationOn,
 } from "react-icons/md";
 import { dashboardService } from "../services/dashboardService";
-import { useAuth } from "../context/AuthContext";
+import { useAppSelector } from "../store";
+import { selectAuth } from "../store/slices/authSlice";
 
 const COLORS = ["#22c55e", "#f59e0b", "#ef4444", "#64748b"];
 const CATEGORY_COLORS = ["#4f46e5", "#06b6d4", "#8b5cf6", "#f59e0b", "#ec4899"];
@@ -103,8 +104,8 @@ const ProviderDashboardView: React.FC<{
             <div className="value" style={{ fontSize: 18 }}>
               {fullName}
             </div>
-            <div className="change">
-              <MdLocationOn style={{ verticalAlign: "middle" }} />{" "}
+            <div className="change" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <MdLocationOn />
               {data.location || "N/A"}
             </div>
           </div>
@@ -243,7 +244,7 @@ const ProviderDashboardView: React.FC<{
 
       <div className="chart-card" style={{ marginTop: 24 }}>
         <h3>
-          <MdHistory style={{ verticalAlign: "middle", marginRight: 8 }} />
+          <MdHistory />
           Recent Evaluations
         </h3>
         <div className="table-container">
@@ -290,7 +291,7 @@ const ProviderDashboardView: React.FC<{
 };
 
 const DashboardPage: React.FC = () => {
-  const { role, fullName, providerId } = useAuth();
+  const { role, fullName, providerId } = useAppSelector(selectAuth);
   const isAdmin = role === "Admin";
   const isManager = role === "Manager";
   const isProvider = role === "Viewer" && providerId != null;
@@ -612,7 +613,7 @@ const AdminManagerDashboard: React.FC<{
       {(isAdmin || isManager) && (
         <div className="chart-card" style={{ marginTop: 4 }}>
           <h3>
-            <MdPeople style={{ verticalAlign: "middle", marginRight: 8 }} />
+            <MdPeople />
             Recent Providers Overview
           </h3>
           <div
@@ -672,7 +673,7 @@ const AdminManagerDashboard: React.FC<{
       {isAdmin && adminSummary && adminSummary.recentActivity.length > 0 && (
         <div className="chart-card" style={{ marginTop: 24 }}>
           <h3>
-            <MdHistory style={{ verticalAlign: "middle", marginRight: 8 }} />
+            <MdHistory />
             Recent Activity
           </h3>
           <div className="table-container">

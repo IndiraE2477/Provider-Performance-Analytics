@@ -1,18 +1,29 @@
 import React, {
   createContext,
   useContext,
-  useState,
   useCallback,
   useMemo,
   useEffect,
   useRef,
+  useState,
 } from "react";
-import type { AuthState } from "../types";
+import { useAppSelector, useAppDispatch } from "../store";
+import {
+  setCredentials,
+  logout as logoutAction,
+  selectAuth,
+} from "../store/slices/authSlice";
 
 const SESSION_TIMEOUT_MS = 15 * 60_000; // 15 minutes of inactivity before warning
 const COUNTDOWN_SECONDS = 30; // 30 second countdown on the warning popup
 
-interface AuthContextType extends AuthState {
+interface AuthContextType {
+  token: string | null;
+  username: string | null;
+  fullName: string | null;
+  role: string | null;
+  providerId: number | null;
+  isAuthenticated: boolean;
   login: (
     token: string,
     username: string,
@@ -26,38 +37,11 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const getInitialState = (): AuthState => {
-  const token = localStorage.getItem("token");
-  const userStr = localStorage.getItem("user");
-  if (token && userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      return { ...user, token, isAuthenticated: true };
-    } catch {
-      return {
-        token: null,
-        username: null,
-        fullName: null,
-        role: null,
-        providerId: null,
-        isAuthenticated: false,
-      };
-    }
-  }
-  return {
-    token: null,
-    username: null,
-    fullName: null,
-    role: null,
-    providerId: null,
-    isAuthenticated: false,
-  };
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [authState, setAuthState] = useState<AuthState>(getInitialState);
+  const dispatch = useAppDispatch();
+  const authState = useAppSelector(selectAuth);
 
   const login = useCallback(
     (
@@ -67,35 +51,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       role: string,
       providerId: number | null,
     ) => {
-      localStorage.setItem("token", token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ username, fullName, role, providerId }),
-      );
-      setAuthState({
-        token,
-        username,
-        fullName,
-        role,
-        providerId,
-        isAuthenticated: true,
-      });
+      dispatch(setCredentials({ token, username, fullName, role, providerId }));
     },
-    [],
+    [dispatch],
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setAuthState({
-      token: null,
-      username: null,
-      fullName: null,
-      role: null,
-      providerId: null,
-      isAuthenticated: false,
-    });
-  }, []);
+    dispatch(logoutAction());
+  }, [dispatch]);
 
   const hasRole = useCallback(
     (roles: string[]) => {
@@ -105,7 +68,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const value = useMemo(
-    () => ({ ...authState, login, logout, hasRole }),
+    () => ({
+      token: authState.token,
+      username: authState.username,
+      fullName: authState.fullName,
+      role: authState.role,
+      providerId: authState.providerId,
+      isAuthenticated: authState.isAuthenticated,
+      login,
+      logout,
+      hasRole,
+    }),
     [authState, login, logout, hasRole],
   );
 
@@ -236,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 transition: "color 0.3s",
               }}
             >
-              {countdown}s
+              {countdown}
             </div>
             <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 20 }}>
               You will be logged out automatically.

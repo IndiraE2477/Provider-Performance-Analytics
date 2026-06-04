@@ -7,9 +7,10 @@ public class LoginRequestValidator : AbstractValidator<LoginRequestDto>
 {
     public LoginRequestValidator()
     {
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required")
-            .MaximumLength(100).WithMessage("Username must not exceed 100 characters");
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required")
+            .EmailAddress().WithMessage("Invalid email address")
+            .MaximumLength(200).WithMessage("Email must not exceed 200 characters");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required")

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MdGroup, MdAdd, MdEdit, MdClose } from "react-icons/md";
 import { toast } from "react-toastify";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { userService } from "../services/userService";
 import type { UserListItem, CreateUser, UpdateUser } from "../types";
 
@@ -11,24 +13,64 @@ const ROLES = [
   { id: 3, name: "Viewer" },
 ];
 
+const createUserSchema = Yup.object({
+  username: Yup.string().trim().required("Username is required"),
+  fullName: Yup.string().trim().required("Full name is required"),
+  email: Yup.string()
+    .trim()
+    .required("Email is required")
+    .email("Invalid email address"),
+  password: Yup.string()
+    .required("Password is required")
+    .min(6, "Password must be at least 6 characters"),
+  roleId: Yup.number().required("Role is required"),
+});
+
+const editUserSchema = Yup.object({
+  fullName: Yup.string().trim().required("Full name is required"),
+  email: Yup.string()
+    .trim()
+    .required("Email is required")
+    .email("Invalid email address"),
+  roleId: Yup.number().required("Role is required"),
+  isActive: Yup.boolean().required(),
+});
+
 const UsersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
 
-  const [createForm, setCreateForm] = useState<CreateUser>({
-    username: "",
-    email: "",
-    fullName: "",
-    password: "",
-    roleId: 3,
+  const createFormik = useFormik({
+    initialValues: {
+      username: "",
+      email: "",
+      fullName: "",
+      password: "",
+      roleId: 3,
+    },
+    validationSchema: createUserSchema,
+    validateOnMount: true,
+    onSubmit: (values) => {
+      createMutation.mutate(values);
+    },
   });
 
-  const [editForm, setEditForm] = useState<UpdateUser>({
-    fullName: "",
-    email: "",
-    roleId: 3,
-    isActive: true,
+  const editFormik = useFormik({
+    initialValues: {
+      fullName: "",
+      email: "",
+      roleId: 3,
+      isActive: true,
+    },
+    validationSchema: editUserSchema,
+    enableReinitialize: true,
+    validateOnMount: true,
+    onSubmit: (values) => {
+      if (editingUser) {
+        updateMutation.mutate({ id: editingUser.id, data: values });
+      }
+    },
   });
 
   const { data: users, isLoading } = useQuery({
@@ -65,39 +107,25 @@ const UsersPage: React.FC = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
-    setCreateForm({
-      username: "",
-      email: "",
-      fullName: "",
-      password: "",
-      roleId: 3,
-    });
-    setEditForm({ fullName: "", email: "", roleId: 3, isActive: true });
+    createFormik.resetForm();
+    editFormik.resetForm();
   };
 
   const openCreate = () => {
     setEditingUser(null);
+    createFormik.resetForm();
     setShowModal(true);
   };
 
   const openEdit = (user: UserListItem) => {
     setEditingUser(user);
-    setEditForm({
+    editFormik.setValues({
       fullName: user.fullName,
       email: user.email,
       roleId: user.roleId,
       isActive: user.isActive,
     });
     setShowModal(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingUser) {
-      updateMutation.mutate({ id: editingUser.id, data: editForm });
-    } else {
-      createMutation.mutate(createForm);
-    }
   };
 
   if (isLoading) {
@@ -112,11 +140,11 @@ const UsersPage: React.FC = () => {
     <div>
       <div className="page-header">
         <h1>
-          <MdGroup style={{ verticalAlign: "middle", marginRight: 8 }} />
+          <MdGroup />
           User Management
         </h1>
         <button className="btn btn-primary" onClick={openCreate}>
-          <MdAdd style={{ verticalAlign: "middle", marginRight: 4 }} /> Add User
+          <MdAdd /> Add User
         </button>
       </div>
 
@@ -200,7 +228,7 @@ const UsersPage: React.FC = () => {
                       style={{ padding: "4px 10px", fontSize: 13 }}
                       onClick={() => openEdit(user)}
                     >
-                      <MdEdit style={{ verticalAlign: "middle" }} /> Edit
+                      <MdEdit /> Edit
                     </button>
                   </td>
                 </tr>
@@ -232,82 +260,136 @@ const UsersPage: React.FC = () => {
                 <MdClose size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form
+              onSubmit={
+                editingUser
+                  ? editFormik.handleSubmit
+                  : createFormik.handleSubmit
+              }
+            >
               {!editingUser && (
                 <div className="form-group">
-                  <label htmlFor="username">Username</label>
+                  <label htmlFor="username">
+                    Username <span className="required-mark">*</span>
+                  </label>
                   <input
                     id="username"
                     type="text"
-                    className="form-control"
-                    value={createForm.username}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, username: e.target.value })
-                    }
-                    required
+                    className={`form-control ${createFormik.touched.username && createFormik.errors.username ? "error" : ""}`}
+                    {...createFormik.getFieldProps("username")}
                   />
+                  {createFormik.touched.username &&
+                    createFormik.errors.username && (
+                      <span className="error-text">
+                        {createFormik.errors.username}
+                      </span>
+                    )}
                 </div>
               )}
               <div className="form-group">
-                <label htmlFor="fullName">Full Name</label>
+                <label htmlFor="fullName">
+                  Full Name <span className="required-mark">*</span>
+                </label>
                 <input
                   id="fullName"
                   type="text"
-                  className="form-control"
-                  value={editingUser ? editForm.fullName : createForm.fullName}
-                  onChange={(e) =>
+                  className={`form-control ${
                     editingUser
-                      ? setEditForm({ ...editForm, fullName: e.target.value })
-                      : setCreateForm({
-                          ...createForm,
-                          fullName: e.target.value,
-                        })
-                  }
-                  required
+                      ? editFormik.touched.fullName &&
+                        editFormik.errors.fullName
+                        ? "error"
+                        : ""
+                      : createFormik.touched.fullName &&
+                          createFormik.errors.fullName
+                        ? "error"
+                        : ""
+                  }`}
+                  {...(editingUser
+                    ? editFormik.getFieldProps("fullName")
+                    : createFormik.getFieldProps("fullName"))}
                 />
+                {editingUser
+                  ? editFormik.touched.fullName &&
+                    editFormik.errors.fullName && (
+                      <span className="error-text">
+                        {editFormik.errors.fullName}
+                      </span>
+                    )
+                  : createFormik.touched.fullName &&
+                    createFormik.errors.fullName && (
+                      <span className="error-text">
+                        {createFormik.errors.fullName}
+                      </span>
+                    )}
               </div>
               <div className="form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">
+                  Email <span className="required-mark">*</span>
+                </label>
                 <input
                   id="email"
                   type="email"
-                  className="form-control"
-                  value={editingUser ? editForm.email : createForm.email}
-                  onChange={(e) =>
+                  className={`form-control ${
                     editingUser
-                      ? setEditForm({ ...editForm, email: e.target.value })
-                      : setCreateForm({ ...createForm, email: e.target.value })
-                  }
-                  required
+                      ? editFormik.touched.email && editFormik.errors.email
+                        ? "error"
+                        : ""
+                      : createFormik.touched.email && createFormik.errors.email
+                        ? "error"
+                        : ""
+                  }`}
+                  {...(editingUser
+                    ? editFormik.getFieldProps("email")
+                    : createFormik.getFieldProps("email"))}
                 />
+                {editingUser
+                  ? editFormik.touched.email &&
+                    editFormik.errors.email && (
+                      <span className="error-text">
+                        {editFormik.errors.email}
+                      </span>
+                    )
+                  : createFormik.touched.email &&
+                    createFormik.errors.email && (
+                      <span className="error-text">
+                        {createFormik.errors.email}
+                      </span>
+                    )}
               </div>
               {!editingUser && (
                 <div className="form-group">
-                  <label htmlFor="password">Password</label>
+                  <label htmlFor="password">
+                    Password <span className="required-mark">*</span>
+                  </label>
                   <input
                     id="password"
                     type="password"
-                    className="form-control"
-                    value={createForm.password}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, password: e.target.value })
-                    }
-                    required
-                    minLength={6}
+                    className={`form-control ${createFormik.touched.password && createFormik.errors.password ? "error" : ""}`}
+                    {...createFormik.getFieldProps("password")}
                   />
+                  {createFormik.touched.password &&
+                    createFormik.errors.password && (
+                      <span className="error-text">
+                        {createFormik.errors.password}
+                      </span>
+                    )}
                 </div>
               )}
               <div className="form-group">
-                <label htmlFor="role">Role</label>
+                <label htmlFor="role">
+                  Role <span className="required-mark">*</span>
+                </label>
                 <select
                   id="role"
                   className="form-control"
-                  value={editingUser ? editForm.roleId : createForm.roleId}
+                  {...(editingUser
+                    ? editFormik.getFieldProps("roleId")
+                    : createFormik.getFieldProps("roleId"))}
                   onChange={(e) => {
                     const roleId = parseInt(e.target.value);
                     editingUser
-                      ? setEditForm({ ...editForm, roleId })
-                      : setCreateForm({ ...createForm, roleId });
+                      ? editFormik.setFieldValue("roleId", roleId)
+                      : createFormik.setFieldValue("roleId", roleId);
                   }}
                 >
                   {ROLES.map((r) => (
@@ -324,9 +406,9 @@ const UsersPage: React.FC = () => {
                   >
                     <input
                       type="checkbox"
-                      checked={editForm.isActive}
+                      checked={editFormik.values.isActive}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, isActive: e.target.checked })
+                        editFormik.setFieldValue("isActive", e.target.checked)
                       }
                     />
                     Active
@@ -352,7 +434,11 @@ const UsersPage: React.FC = () => {
                   type="submit"
                   className="btn btn-primary"
                   disabled={
-                    createMutation.isPending || updateMutation.isPending
+                    !(editingUser
+                      ? editFormik.isValid
+                      : createFormik.isValid) ||
+                    createMutation.isPending ||
+                    updateMutation.isPending
                   }
                 >
                   {createMutation.isPending || updateMutation.isPending
