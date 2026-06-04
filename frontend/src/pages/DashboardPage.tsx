@@ -104,7 +104,10 @@ const ProviderDashboardView: React.FC<{
             <div className="value" style={{ fontSize: 18 }}>
               {fullName}
             </div>
-            <div className="change" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div
+              className="change"
+              style={{ display: "flex", alignItems: "center", gap: 4 }}
+            >
               <MdLocationOn />
               {data.location || "N/A"}
             </div>

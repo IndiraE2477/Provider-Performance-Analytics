@@ -79,7 +79,8 @@ const getProviderSchema = (existingEmails: string[], currentEmail?: string) =>
       .test("unique-email", "This email is already in use", (value) => {
         if (!value) return true;
         const normalised = value.toLowerCase();
-        if (currentEmail && normalised === currentEmail.toLowerCase()) return true;
+        if (currentEmail && normalised === currentEmail.toLowerCase())
+          return true;
         return !existingEmails.some((e) => e.toLowerCase() === normalised);
       }),
     countryCode: Yup.string().required("Country code is required"),
@@ -559,7 +560,9 @@ const ProvidersPage: React.FC = () => {
                   />
                 </div>
                 {formik.touched.phoneNumber && formik.errors.phoneNumber && (
-                  <span className="error-text">{formik.errors.phoneNumber}</span>
+                  <span className="error-text">
+                    {formik.errors.phoneNumber}
+                  </span>
                 )}
               </div>
 
