@@ -111,4 +111,50 @@ public class ProvidersController : ControllerBase
         var result = await _providerService.GetSpecialtiesAsync();
         return Ok(new ApiResponse<IEnumerable<string>>(true, "Specialties retrieved", result));
     }
+
+    [HttpGet("{id:int}/report")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(FileContentResult), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> DownloadProviderReport(int id)
+    {
+        var provider = await _providerService.GetProviderByIdAsync(id);
+        if (provider == null)
+            return NotFound(new ApiErrorResponse(false, $"Provider with ID {id} not found"));
+
+        var csv = new System.Text.StringBuilder();
+
+        // Provider details section
+        csv.AppendLine("PROVIDER DETAILS REPORT");
+        csv.AppendLine($"Generated:,{DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC");
+        csv.AppendLine();
+        csv.AppendLine("Name,Specialty,Email,Phone,Location,Status,Average Score,Created");
+        csv.AppendLine($"\"{provider.Name}\",\"{provider.Specialty}\",\"{provider.Email}\",\"{provider.Phone}\",\"{provider.Location}\",\"{provider.Status}\",{provider.AverageScore:F2},{provider.CreatedAt:yyyy-MM-dd}");
+        csv.AppendLine();
+
+        // Score history section
+        csv.AppendLine("SCORE HISTORY");
+        csv.AppendLine("Date,Category,Score,Notes,Evaluated By");
+        foreach (var score in provider.Scores.OrderByDescending(s => s.EvaluationDate))
+        {
+            csv.AppendLine($"{score.EvaluationDate:yyyy-MM-dd},\"{score.Category}\",{score.Score:F2},\"{score.Notes}\",\"{score.EvaluatedBy}\"");
+        }
+        csv.AppendLine();
+
+        // Analytics summary
+        csv.AppendLine("ANALYTICS SUMMARY");
+        csv.AppendLine("Category,Average Score,Count");
+        var categoryGroups = provider.Scores
+            .Where(s => !string.IsNullOrEmpty(s.Category))
+            .GroupBy(s => s.Category)
+            .Select(g => new { Category = g.Key, Avg = g.Average(s => s.Score), Count = g.Count() });
+        foreach (var cat in categoryGroups)
+        {
+            csv.AppendLine($"\"{cat.Category}\",{cat.Avg:F2},{cat.Count}");
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+        var fileName = $"Provider_Report_{provider.Name.Replace(" ", "_")}_{DateTime.UtcNow:yyyyMMdd}.csv";
+        return File(bytes, "text/csv", fileName);
+    }
 }

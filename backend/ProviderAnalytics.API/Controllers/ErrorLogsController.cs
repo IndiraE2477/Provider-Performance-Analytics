@@ -20,10 +20,10 @@ public class ErrorLogsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<IEnumerable<ErrorLogDto>>), 200)]
-    public async Task<IActionResult> GetErrorLogs()
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<ErrorLogDto>>), 200)]
+    public async Task<IActionResult> GetErrorLogs([FromQuery] ErrorLogQueryParams queryParams)
     {
-        var result = await _errorLogService.GetErrorLogsAsync();
-        return Ok(new ApiResponse<IEnumerable<ErrorLogDto>>(true, "Error logs retrieved", result));
+        var result = await _errorLogService.GetErrorLogsPagedAsync(queryParams);
+        return Ok(new ApiResponse<PagedResult<ErrorLogDto>>(true, "Error logs retrieved", result));
     }
 }

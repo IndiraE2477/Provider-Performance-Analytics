@@ -32,16 +32,19 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
     {
-        var user = await _userRepository.GetByEmailAsync(request.Email);
+        var user = request.EmailOrUsername.Contains('@')
+            ? await _userRepository.GetByEmailAsync(request.EmailOrUsername)
+            : await _userRepository.GetByUsernameAsync(request.EmailOrUsername);
+
         if (user == null)
         {
-            _logger.LogWarning("Login attempt failed: User with email {Email} not found", request.Email);
+            _logger.LogWarning("Login attempt failed: User {Identifier} not found", request.EmailOrUsername);
             return null;
         }
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
-            _logger.LogWarning("Login attempt failed: Invalid password for user {Email}", request.Email);
+            _logger.LogWarning("Login attempt failed: Invalid password for user {Identifier}", request.EmailOrUsername);
             return null;
         }
 
@@ -52,7 +55,7 @@ public class AuthService : IAuthService
         var expiration = DateTime.UtcNow.AddHours(
             double.Parse(_configuration["Jwt:ExpirationHours"] ?? "8"));
 
-        _logger.LogInformation("User {Email} logged in successfully", request.Email);
+        _logger.LogInformation("User {Identifier} logged in successfully", request.EmailOrUsername);
 
         return new LoginResponseDto(
             Token: token,

@@ -12,11 +12,11 @@ import {
   MdPeople,
 } from "react-icons/md";
 import { toast } from "react-toastify";
-import { useFormik } from "formik";
-import * as Yup from "yup";
 import { providerService } from "../services/providerService";
 import { useAppSelector, useAppDispatch } from "../store";
-import { selectHasRole } from "../store/slices/authSlice";
+import {
+  selectHasRole,
+} from "../store/slices/authSlice";
 import {
   selectProviderFilters,
   setFilters,
@@ -24,73 +24,11 @@ import {
   setPage,
   setSorting,
 } from "../store/slices/providerSlice";
-import type { CreateProvider, UpdateProvider, Provider } from "../types";
-
-const COUNTRY_CODES = [
-  { code: "+1", label: "+1 (US)" },
-  { code: "+44", label: "+44 (UK)" },
-  { code: "+91", label: "+91 (IN)" },
-  { code: "+61", label: "+61 (AU)" },
-  { code: "+81", label: "+81 (JP)" },
-  { code: "+49", label: "+49 (DE)" },
-  { code: "+33", label: "+33 (FR)" },
-  { code: "+86", label: "+86 (CN)" },
-  { code: "+55", label: "+55 (BR)" },
-  { code: "+971", label: "+971 (AE)" },
-];
-
-const LOCATIONS = [
-  "New York, NY",
-  "Los Angeles, CA",
-  "Chicago, IL",
-  "Houston, TX",
-  "Phoenix, AZ",
-  "Philadelphia, PA",
-  "San Antonio, TX",
-  "San Diego, CA",
-  "Dallas, TX",
-  "San Jose, CA",
-  "Austin, TX",
-  "Jacksonville, FL",
-  "San Francisco, CA",
-  "Columbus, OH",
-  "Charlotte, NC",
-  "Indianapolis, IN",
-  "Seattle, WA",
-  "Denver, CO",
-  "Washington, DC",
-  "Boston, MA",
-  "Nashville, TN",
-  "Detroit, MI",
-  "Portland, OR",
-  "Las Vegas, NV",
-  "Atlanta, GA",
-  "Miami, FL",
-];
-
-const getProviderSchema = (existingEmails: string[], currentEmail?: string) =>
-  Yup.object({
-    name: Yup.string().trim().required("Provider name is required"),
-    specialty: Yup.string().trim().required("Specialty is required"),
-    email: Yup.string()
-      .trim()
-      .required("Email is required")
-      .email("Invalid email address")
-      .test("unique-email", "This email is already in use", (value) => {
-        if (!value) return true;
-        const normalised = value.toLowerCase();
-        if (currentEmail && normalised === currentEmail.toLowerCase())
-          return true;
-        return !existingEmails.some((e) => e.toLowerCase() === normalised);
-      }),
-    countryCode: Yup.string().required("Country code is required"),
-    phoneNumber: Yup.string()
-      .trim()
-      .required("Phone number is required")
-      .matches(/^\d{10,12}$/, "Phone number must be 10 to 12 digits"),
-    location: Yup.string().notRequired(),
-    status: Yup.string().notRequired(),
-  });
+import type {
+  CreateProvider,
+  UpdateProvider,
+  Provider,
+} from "../types";
 
 const statusBadge = (status: string) => {
   const cls =
@@ -117,58 +55,21 @@ const ProvidersPage: React.FC = () => {
   const canDelete = useAppSelector(selectHasRole(["Admin"]));
   const [showModal, setShowModal] = useState(false);
   const [editProvider, setEditProvider] = useState<Provider | null>(null);
+  const [formData, setFormData] = useState<
+    CreateProvider & { status?: string }
+  >({
+    name: "",
+    specialty: "",
+    email: "",
+    phone: "",
+    location: "",
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["providers", queryParams],
     queryFn: () => providerService.getProviders(queryParams),
     staleTime: 10000,
-  });
-
-  const existingEmails = useMemo(
-    () => (data?.items || []).map((p) => p.email).filter(Boolean) as string[],
-    [data],
-  );
-
-  const providerSchema = useMemo(
-    () => getProviderSchema(existingEmails, editProvider?.email || undefined),
-    [existingEmails, editProvider],
-  );
-
-  const formik = useFormik({
-    initialValues: {
-      name: "",
-      specialty: "",
-      email: "",
-      countryCode: "+1",
-      phoneNumber: "",
-      location: "",
-      status: "Active",
-    },
-    validationSchema: providerSchema,
-    validateOnMount: true,
-    onSubmit: (values) => {
-      if (editProvider) {
-        updateMutation.mutate({
-          id: editProvider.id,
-          data: {
-            name: values.name,
-            specialty: values.specialty,
-            email: values.email || undefined,
-            phone: `${values.countryCode} ${values.phoneNumber}` || undefined,
-            location: values.location || undefined,
-            status: values.status || "Active",
-          },
-        });
-      } else {
-        createMutation.mutate({
-          name: values.name,
-          specialty: values.specialty,
-          email: values.email || undefined,
-          phone: `${values.countryCode} ${values.phoneNumber}` || undefined,
-          location: values.location || undefined,
-        });
-      }
-    },
   });
 
   const { data: specialties } = useQuery({
@@ -216,47 +117,84 @@ const ProvidersPage: React.FC = () => {
   const closeModal = useCallback(() => {
     setShowModal(false);
     setEditProvider(null);
-    formik.resetForm();
-  }, [formik]);
+    setFormData({
+      name: "",
+      specialty: "",
+      email: "",
+      phone: "",
+      location: "",
+    });
+    setFormErrors({});
+  }, []);
 
   const openCreateModal = useCallback(() => {
     setEditProvider(null);
-    formik.resetForm();
+    setFormData({
+      name: "",
+      specialty: "",
+      email: "",
+      phone: "",
+      location: "",
+    });
     setShowModal(true);
-  }, [formik]);
+  }, []);
 
-  const openEditModal = useCallback(
-    (provider: Provider) => {
-      setEditProvider(provider);
-      const phoneParts = (provider.phone || "").match(/^(\+\d{1,4})\s*(.*)$/);
-      formik.setValues({
-        name: provider.name,
-        specialty: provider.specialty,
-        email: provider.email || "",
-        countryCode: phoneParts ? phoneParts[1] : "+1",
-        phoneNumber: phoneParts ? phoneParts[2] : provider.phone || "",
-        location: provider.location || "",
-        status: provider.status,
+  const openEditModal = useCallback((provider: Provider) => {
+    setEditProvider(provider);
+    setFormData({
+      name: provider.name,
+      specialty: provider.specialty,
+      email: provider.email || "",
+      phone: provider.phone || "",
+      location: provider.location || "",
+      status: provider.status,
+    });
+    setShowModal(true);
+  }, []);
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = "Provider name is required";
+    if (!formData.specialty.trim()) errors.specialty = "Specialty is required";
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      errors.email = "Invalid email address";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    if (editProvider) {
+      updateMutation.mutate({
+        id: editProvider.id,
+        data: {
+          name: formData.name,
+          specialty: formData.specialty,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
+          location: formData.location || undefined,
+          status: formData.status || "Active",
+        },
       });
-      setShowModal(true);
-    },
-    [formik],
-  );
+    } else {
+      createMutation.mutate({
+        name: formData.name,
+        specialty: formData.specialty,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        location: formData.location || undefined,
+      });
+    }
+  };
 
-  const handleSort = useCallback(
-    (field: string) => {
-      dispatch(
-        setSorting({
-          sortBy: field,
-          sortOrder:
-            queryParams.sortBy === field && queryParams.sortOrder === "asc"
-              ? "desc"
-              : "asc",
-        }),
-      );
-    },
-    [dispatch, queryParams.sortBy, queryParams.sortOrder],
-  );
+  const handleSort = useCallback((field: string) => {
+    dispatch(setSorting({
+      sortBy: field,
+      sortOrder: queryParams.sortBy === field && queryParams.sortOrder === "asc" ? "desc" : "asc",
+    }));
+  }, [dispatch, queryParams.sortBy, queryParams.sortOrder]);
 
   const SortIcon = ({ field }: { field: string }) => {
     if (queryParams.sortBy !== field) return null;
@@ -294,7 +232,9 @@ const ProvidersPage: React.FC = () => {
               className="form-control"
               placeholder="Search providers..."
               value={queryParams.search || ""}
-              onChange={(e) => dispatch(setSearch(e.target.value))}
+              onChange={(e) =>
+                dispatch(setSearch(e.target.value))
+              }
             />
           </div>
           <select
@@ -302,9 +242,7 @@ const ProvidersPage: React.FC = () => {
             style={{ width: 180 }}
             value={queryParams.specialty || ""}
             onChange={(e) =>
-              dispatch(
-                setFilters({ specialty: e.target.value || undefined, page: 1 }),
-              )
+              dispatch(setFilters({ specialty: e.target.value || undefined, page: 1 }))
             }
           >
             <option value="">All Specialties</option>
@@ -319,9 +257,7 @@ const ProvidersPage: React.FC = () => {
             style={{ width: 150 }}
             value={queryParams.status || ""}
             onChange={(e) =>
-              dispatch(
-                setFilters({ status: e.target.value || undefined, page: 1 }),
-              )
+              dispatch(setFilters({ status: e.target.value || undefined, page: 1 }))
             }
           >
             <option value="">All Status</option>
@@ -439,7 +375,9 @@ const ProvidersPage: React.FC = () => {
                 <button
                   className="pagination-btn"
                   disabled={!data.hasPrevious}
-                  onClick={() => dispatch(setPage((queryParams.page || 1) - 1))}
+                  onClick={() =>
+                    dispatch(setPage((queryParams.page || 1) - 1))
+                  }
                 >
                   Previous
                 </button>
@@ -447,7 +385,9 @@ const ProvidersPage: React.FC = () => {
                   <button
                     key={num}
                     className={`pagination-btn ${num === data.page ? "active" : ""}`}
-                    onClick={() => dispatch(setPage(num))}
+                    onClick={() =>
+                      dispatch(setPage(num))
+                    }
                   >
                     {num}
                   </button>
@@ -455,7 +395,9 @@ const ProvidersPage: React.FC = () => {
                 <button
                   className="pagination-btn"
                   disabled={!data.hasNext}
-                  onClick={() => dispatch(setPage((queryParams.page || 1) + 1))}
+                  onClick={() =>
+                    dispatch(setPage((queryParams.page || 1) + 1))
+                  }
                 >
                   Next
                 </button>
@@ -475,111 +417,85 @@ const ProvidersPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={formik.handleSubmit}>
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="name">
-                  Provider Name <span className="required-mark">*</span>
-                </label>
+                <label htmlFor="name">Provider Name *</label>
                 <input
                   id="name"
                   type="text"
-                  className={`form-control ${formik.touched.name && formik.errors.name ? "error" : ""}`}
-                  {...formik.getFieldProps("name")}
+                  className={`form-control ${formErrors.name ? "error" : ""}`}
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                 />
-                {formik.touched.name && formik.errors.name && (
-                  <span className="error-text">{formik.errors.name}</span>
+                {formErrors.name && (
+                  <span className="error-text">{formErrors.name}</span>
                 )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="specialty">
-                  Specialty <span className="required-mark">*</span>
-                </label>
-                <select
+                <label htmlFor="specialty">Specialty *</label>
+                <input
                   id="specialty"
-                  className={`form-control ${formik.touched.specialty && formik.errors.specialty ? "error" : ""}`}
-                  {...formik.getFieldProps("specialty")}
-                >
-                  <option value="">Select a specialty</option>
-                  {specialties?.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-                {formik.touched.specialty && formik.errors.specialty && (
-                  <span className="error-text">{formik.errors.specialty}</span>
+                  type="text"
+                  className={`form-control ${formErrors.specialty ? "error" : ""}`}
+                  value={formData.specialty}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      specialty: e.target.value,
+                    }))
+                  }
+                />
+                {formErrors.specialty && (
+                  <span className="error-text">{formErrors.specialty}</span>
                 )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="email">
-                  Email <span className="required-mark">*</span>
-                </label>
+                <label htmlFor="email">Email</label>
                 <input
                   id="email"
                   type="email"
-                  className={`form-control ${formik.touched.email && formik.errors.email ? "error" : ""}`}
-                  {...formik.getFieldProps("email")}
+                  className={`form-control ${formErrors.email ? "error" : ""}`}
+                  value={formData.email || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                 />
-                {formik.touched.email && formik.errors.email && (
-                  <span className="error-text">{formik.errors.email}</span>
+                {formErrors.email && (
+                  <span className="error-text">{formErrors.email}</span>
                 )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="phoneNumber">
-                  Phone <span className="required-mark">*</span>
-                </label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <select
-                    id="countryCode"
-                    className={`form-control ${formik.touched.countryCode && formik.errors.countryCode ? "error" : ""}`}
-                    style={{ width: 120, flexShrink: 0 }}
-                    {...formik.getFieldProps("countryCode")}
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    id="phoneNumber"
-                    type="text"
-                    className={`form-control ${formik.touched.phoneNumber && formik.errors.phoneNumber ? "error" : ""}`}
-                    placeholder="Enter phone number"
-                    maxLength={12}
-                    value={formik.values.phoneNumber}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, "");
-                      formik.setFieldValue("phoneNumber", digits);
-                    }}
-                    onBlur={formik.handleBlur}
-                    name="phoneNumber"
-                  />
-                </div>
-                {formik.touched.phoneNumber && formik.errors.phoneNumber && (
-                  <span className="error-text">
-                    {formik.errors.phoneNumber}
-                  </span>
-                )}
+                <label htmlFor="phone">Phone</label>
+                <input
+                  id="phone"
+                  type="text"
+                  className="form-control"
+                  value={formData.phone || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                />
               </div>
 
               <div className="form-group">
                 <label htmlFor="location">Location</label>
-                <select
+                <input
                   id="location"
+                  type="text"
                   className="form-control"
-                  {...formik.getFieldProps("location")}
-                >
-                  <option value="">Select a location</option>
-                  {LOCATIONS.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
+                  value={formData.location || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      location: e.target.value,
+                    }))
+                  }
+                />
               </div>
 
               {editProvider && (
@@ -588,7 +504,13 @@ const ProvidersPage: React.FC = () => {
                   <select
                     id="status"
                     className="form-control"
-                    {...formik.getFieldProps("status")}
+                    value={formData.status || "Active"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: e.target.value,
+                      }))
+                    }
                   >
                     <option value="Active">Active</option>
                     <option value="At-Risk">At-Risk</option>
@@ -609,9 +531,7 @@ const ProvidersPage: React.FC = () => {
                   type="submit"
                   className="btn btn-primary"
                   disabled={
-                    !formik.isValid ||
-                    createMutation.isPending ||
-                    updateMutation.isPending
+                    createMutation.isPending || updateMutation.isPending
                   }
                 >
                   {createMutation.isPending || updateMutation.isPending

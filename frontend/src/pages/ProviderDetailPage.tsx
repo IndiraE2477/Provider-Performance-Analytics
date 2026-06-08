@@ -1,16 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  MdArrowBack,
-  MdAdd,
-  MdDelete,
-  MdEdit,
-  MdSmartToy,
-  MdShield,
-  MdLightbulb,
-  MdTrendingUp,
-} from "react-icons/md";
+import { MdArrowBack, MdAdd, MdDelete, MdEdit } from "react-icons/md";
 import {
   LineChart,
   Line,
@@ -22,24 +13,11 @@ import {
   Legend,
 } from "recharts";
 import { toast } from "react-toastify";
-import { useFormik } from "formik";
-import * as Yup from "yup";
 import { providerService } from "../services/providerService";
 import { scoreService } from "../services/scoreService";
-import { aiService } from "../services/aiService";
 import { useAppSelector } from "../store";
 import { selectHasRole } from "../store/slices/authSlice";
 import type { CreateProviderScore, UpdateProviderScore } from "../types";
-
-const scoreSchema = Yup.object({
-  score: Yup.number()
-    .required("Score is required")
-    .min(0, "Score must be between 0 and 5")
-    .max(5, "Score must be between 0 and 5"),
-  category: Yup.string().notRequired(),
-  notes: Yup.string().notRequired(),
-  evaluationDate: Yup.string().notRequired(),
-});
 
 const ProviderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,66 +28,19 @@ const ProviderDetailPage: React.FC = () => {
 
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [editingScoreId, setEditingScoreId] = useState<number | null>(null);
-  const [showAiPanel, setShowAiPanel] = useState(false);
-
-  const canAi = useAppSelector(selectHasRole(["Admin", "Manager"]));
-
-  const scoreFormik = useFormik({
-    initialValues: {
-      score: 3,
-      category: "",
-      notes: "",
-      evaluationDate: new Date().toISOString().split("T")[0],
-    },
-    validationSchema: scoreSchema,
-    validateOnMount: true,
-    onSubmit: (values) => {
-      if (editingScoreId) {
-        updateScoreMutation.mutate({
-          scoreId: editingScoreId,
-          data: {
-            score: values.score,
-            category: values.category,
-            notes: values.notes,
-          },
-        });
-      } else {
-        createScoreMutation.mutate({
-          providerId: Number(id),
-          score: values.score,
-          category: values.category,
-          notes: values.notes,
-          evaluationDate: values.evaluationDate,
-        });
-      }
-    },
+  const [scoreForm, setScoreForm] = useState<CreateProviderScore>({
+    providerId: Number(id),
+    score: 3,
+    category: "",
+    notes: "",
+    evaluationDate: new Date().toISOString().split("T")[0],
   });
+  const [scoreError, setScoreError] = useState("");
 
   const { data: provider, isLoading } = useQuery({
     queryKey: ["provider", id],
     queryFn: () => providerService.getProvider(Number(id)),
     enabled: !!id,
-  });
-
-  const { data: riskPrediction } = useQuery({
-    queryKey: ["ai-risk", id],
-    queryFn: () => aiService.getProviderRiskPrediction(Number(id)),
-    enabled: !!id && showAiPanel && canAi,
-    staleTime: 60000,
-  });
-
-  const { data: performanceSummary } = useQuery({
-    queryKey: ["ai-summary", id],
-    queryFn: () => aiService.getPerformanceSummary(Number(id)),
-    enabled: !!id && showAiPanel && canAi,
-    staleTime: 60000,
-  });
-
-  const { data: recommendations } = useQuery({
-    queryKey: ["ai-recommendations", id],
-    queryFn: () => aiService.getRecommendations(Number(id)),
-    enabled: !!id && showAiPanel && canAi,
-    staleTime: 60000,
   });
 
   const createScoreMutation = useMutation({
@@ -153,7 +84,14 @@ const ProviderDetailPage: React.FC = () => {
   const closeScoreModal = () => {
     setShowScoreModal(false);
     setEditingScoreId(null);
-    scoreFormik.resetForm();
+    setScoreForm({
+      providerId: Number(id),
+      score: 3,
+      category: "",
+      notes: "",
+      evaluationDate: new Date().toISOString().split("T")[0],
+    });
+    setScoreError("");
   };
 
   const openEditScoreModal = (score: {
@@ -163,13 +101,35 @@ const ProviderDetailPage: React.FC = () => {
     notes: string | null;
   }) => {
     setEditingScoreId(score.id);
-    scoreFormik.setValues({
+    setScoreForm({
+      providerId: Number(id),
       score: score.score,
       category: score.category || "",
       notes: score.notes || "",
       evaluationDate: new Date().toISOString().split("T")[0],
     });
     setShowScoreModal(true);
+  };
+
+  const handleScoreSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (scoreForm.score < 0 || scoreForm.score > 5) {
+      setScoreError("Score must be between 0 and 5");
+      return;
+    }
+    setScoreError("");
+    if (editingScoreId) {
+      updateScoreMutation.mutate({
+        scoreId: editingScoreId,
+        data: {
+          score: scoreForm.score,
+          category: scoreForm.category,
+          notes: scoreForm.notes,
+        },
+      });
+    } else {
+      createScoreMutation.mutate(scoreForm);
+    }
   };
 
   if (isLoading) {
@@ -232,23 +192,12 @@ const ProviderDetailPage: React.FC = () => {
           </div>
         </div>
         {canEdit && (
-          <div style={{ display: "flex", gap: 8 }}>
-            {canAi && (
-              <button
-                className={`btn ${showAiPanel ? "btn-secondary" : "btn-primary"}`}
-                onClick={() => setShowAiPanel(!showAiPanel)}
-                style={{ display: "flex", alignItems: "center", gap: 4 }}
-              >
-                <MdSmartToy /> {showAiPanel ? "Hide AI" : "AI Insights"}
-              </button>
-            )}
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowScoreModal(true)}
-            >
-              <MdAdd /> Add Score
-            </button>
-          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowScoreModal(true)}
+          >
+            <MdAdd /> Add Score
+          </button>
         )}
       </div>
 
@@ -318,245 +267,6 @@ const ProviderDetailPage: React.FC = () => {
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* AI Insights Panel */}
-      {showAiPanel && canAi && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 18,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <MdSmartToy style={{ color: "#4f46e5" }} /> AI Analysis for{" "}
-            {provider.name}
-          </h2>
-
-          {/* Risk Prediction */}
-          {riskPrediction && (
-            <div
-              className="card"
-              style={{
-                borderLeft: `4px solid ${riskPrediction.riskLevel === "High" ? "#ef4444" : riskPrediction.riskLevel === "Medium" ? "#f59e0b" : "#22c55e"}`,
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: 12,
-                }}
-              >
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <MdShield
-                    style={{
-                      color:
-                        riskPrediction.riskLevel === "High"
-                          ? "#ef4444"
-                          : riskPrediction.riskLevel === "Medium"
-                            ? "#f59e0b"
-                            : "#22c55e",
-                    }}
-                  />
-                  Risk Prediction
-                </h3>
-                <span
-                  className={`badge ${riskPrediction.riskLevel === "High" ? "badge-at-risk" : riskPrediction.riskLevel === "Medium" ? "badge-inactive" : "badge-active"}`}
-                >
-                  {riskPrediction.riskLevel} Risk —{" "}
-                  {riskPrediction.riskProbability}%
-                </span>
-              </div>
-              <p style={{ margin: "0 0 8px", color: "#475569", fontSize: 14 }}>
-                {riskPrediction.recommendation}
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {riskPrediction.riskFactors.map((f, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      fontSize: 11,
-                      padding: "2px 8px",
-                      background: "#f1f5f9",
-                      borderRadius: 12,
-                      color: "#475569",
-                    }}
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Performance Summary */}
-          {performanceSummary && (
-            <div
-              className="card"
-              style={{ borderLeft: "4px solid #4f46e5", padding: 20 }}
-            >
-              <h3
-                style={{
-                  margin: "0 0 12px",
-                  fontSize: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <MdTrendingUp style={{ color: "#4f46e5" }} />
-                Performance Summary
-                <span
-                  className={`badge ${performanceSummary.trendDirection === "Improving" ? "badge-active" : performanceSummary.trendDirection === "Declining" ? "badge-at-risk" : "badge-inactive"}`}
-                  style={{ fontSize: 11 }}
-                >
-                  {performanceSummary.trendDirection}
-                </span>
-              </h3>
-              <p
-                style={{
-                  margin: "0 0 12px",
-                  color: "#475569",
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                }}
-              >
-                {performanceSummary.summary}
-              </p>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 16,
-                }}
-              >
-                <div>
-                  <h4
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: 13,
-                      color: "#16a34a",
-                    }}
-                  >
-                    Strengths
-                  </h4>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 18,
-                      fontSize: 13,
-                      color: "#475569",
-                    }}
-                  >
-                    {performanceSummary.strengths.map((s, i) => (
-                      <li key={i} style={{ marginBottom: 4 }}>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: 13,
-                      color: "#dc2626",
-                    }}
-                  >
-                    Areas for Improvement
-                  </h4>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 18,
-                      fontSize: 13,
-                      color: "#475569",
-                    }}
-                  >
-                    {performanceSummary.areasForImprovement.map((s, i) => (
-                      <li key={i} style={{ marginBottom: 4 }}>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Recommendations */}
-          {recommendations && recommendations.length > 0 && (
-            <div
-              className="card"
-              style={{ borderLeft: "4px solid #8b5cf6", padding: 20 }}
-            >
-              <h3
-                style={{
-                  margin: "0 0 12px",
-                  fontSize: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <MdLightbulb style={{ color: "#8b5cf6" }} /> AI Recommendations
-              </h3>
-              {recommendations.map((rec, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "10px 14px",
-                    marginBottom: i < recommendations.length - 1 ? 8 : 0,
-                    background: "#f8fafc",
-                    borderRadius: 8,
-                    borderLeft: `3px solid ${rec.priority === "High" ? "#ef4444" : rec.priority === "Medium" ? "#f59e0b" : "#22c55e"}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <strong style={{ fontSize: 14 }}>{rec.action}</strong>
-                    <span
-                      className={`badge ${rec.priority === "High" ? "badge-at-risk" : rec.priority === "Medium" ? "badge-inactive" : "badge-active"}`}
-                      style={{ fontSize: 10 }}
-                    >
-                      {rec.priority}
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
-                    {rec.reason}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -641,36 +351,38 @@ const ProviderDetailPage: React.FC = () => {
                 ✕
               </button>
             </div>
-            <form onSubmit={scoreFormik.handleSubmit}>
+            <form onSubmit={handleScoreSubmit}>
               <div className="form-group">
-                <label htmlFor="score">
-                  Score (0 - 5) <span className="required-mark">*</span>
-                </label>
+                <label htmlFor="score">Score (0 - 5) *</label>
                 <input
                   id="score"
                   type="number"
                   step="0.01"
                   min="0"
                   max="5"
-                  className={`form-control ${scoreFormik.touched.score && scoreFormik.errors.score ? "error" : ""}`}
-                  {...scoreFormik.getFieldProps("score")}
+                  className={`form-control ${scoreError ? "error" : ""}`}
+                  value={scoreForm.score}
                   onChange={(e) =>
-                    scoreFormik.setFieldValue(
-                      "score",
-                      parseFloat(e.target.value) || 0,
-                    )
+                    setScoreForm((prev) => ({
+                      ...prev,
+                      score: parseFloat(e.target.value) || 0,
+                    }))
                   }
                 />
-                {scoreFormik.touched.score && scoreFormik.errors.score && (
-                  <span className="error-text">{scoreFormik.errors.score}</span>
-                )}
+                {scoreError && <span className="error-text">{scoreError}</span>}
               </div>
               <div className="form-group">
                 <label htmlFor="category">Category</label>
                 <select
                   id="category"
                   className="form-control"
-                  {...scoreFormik.getFieldProps("category")}
+                  value={scoreForm.category || ""}
+                  onChange={(e) =>
+                    setScoreForm((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                    }))
+                  }
                 >
                   <option value="">Select Category</option>
                   <option value="Quality of Care">Quality of Care</option>
@@ -689,7 +401,13 @@ const ProviderDetailPage: React.FC = () => {
                     id="evaluationDate"
                     type="date"
                     className="form-control"
-                    {...scoreFormik.getFieldProps("evaluationDate")}
+                    value={scoreForm.evaluationDate || ""}
+                    onChange={(e) =>
+                      setScoreForm((prev) => ({
+                        ...prev,
+                        evaluationDate: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               )}
@@ -699,7 +417,10 @@ const ProviderDetailPage: React.FC = () => {
                   id="notes"
                   className="form-control"
                   rows={3}
-                  {...scoreFormik.getFieldProps("notes")}
+                  value={scoreForm.notes || ""}
+                  onChange={(e) =>
+                    setScoreForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
                 />
               </div>
               <div className="modal-footer">
@@ -714,7 +435,6 @@ const ProviderDetailPage: React.FC = () => {
                   type="submit"
                   className="btn btn-primary"
                   disabled={
-                    !scoreFormik.isValid ||
                     createScoreMutation.isPending ||
                     updateScoreMutation.isPending
                   }

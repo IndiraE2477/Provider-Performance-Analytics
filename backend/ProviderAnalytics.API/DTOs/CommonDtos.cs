@@ -21,6 +21,26 @@ public record ProviderQueryParams(
     int PageSize = 10
 );
 
+public record ErrorLogQueryParams(
+    string? Search = null,
+    string? Method = null,
+    int? StatusCode = null,
+    string SortBy = "Timestamp",
+    string SortOrder = "desc",
+    int Page = 1,
+    int PageSize = 10
+);
+
+public record AuditLogQueryParams(
+    string? Search = null,
+    string? ActionType = null,
+    string? EntityName = null,
+    string SortBy = "Timestamp",
+    string SortOrder = "desc",
+    int Page = 1,
+    int PageSize = 10
+);
+
 public record ApiResponse<T>(bool Success, string Message, T? Data = default);
 
 public record ApiErrorResponse(bool Success, string Message, List<string>? Errors = null);

@@ -28,62 +28,57 @@ public class AiService : IAiService
         _context = context;
         _logger = logger;
         _httpClient = httpClient;
-        _apiKey = configuration["VertexAI:ApiKey"] ?? "";
-        _modelId = configuration["VertexAI:ModelId"] ?? "gemini-2.0-flash";
+        _apiKey = configuration["OpenAI:ApiKey"] ?? configuration["VertexAI:ApiKey"] ?? "";
+        _modelId = configuration["OpenAI:Model"] ?? "google/gemini-2.0-flash-001";
         _projectId = configuration["VertexAI:ProjectId"] ?? "";
         _location = configuration["VertexAI:Location"] ?? "us-central1";
     }
 
-    // ---- Gemini API Call ----
+    // ---- OpenRouter API Call ----
 
     private async Task<string> CallGeminiAsync(string prompt)
     {
         if (string.IsNullOrWhiteSpace(_apiKey))
-            throw new InvalidOperationException("VertexAI:ApiKey is not configured in appsettings.json. Get an API key from Google AI Studio (https://aistudio.google.com/apikey).");
+            throw new InvalidOperationException("OpenAI:ApiKey is not configured in appsettings.json.");
 
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelId}:generateContent?key={_apiKey}";
+        var url = "https://openrouter.ai/api/v1/chat/completions";
 
         var requestBody = new
         {
-            contents = new[]
+            model = _modelId,
+            messages = new[]
             {
-                new
-                {
-                    parts = new[]
-                    {
-                        new { text = prompt }
-                    }
-                }
+                new { role = "system", content = "You are a data analyst assistant. Always respond with valid JSON only, no markdown formatting." },
+                new { role = "user", content = prompt }
             },
-            generationConfig = new
-            {
-                temperature = 0.3,
-                maxOutputTokens = 4096,
-                responseMimeType = "application/json"
-            }
+            temperature = 0.3,
+            max_tokens = 4096,
+            response_format = new { type = "json_object" }
         };
 
         var json = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
 
         var response = await _httpClient.PostAsync(url, content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Gemini API error: {StatusCode} - {Body}", response.StatusCode, responseBody);
-            throw new Exception($"Gemini API returned {response.StatusCode}. Ensure your API key is valid.");
+            _logger.LogError("OpenRouter API error: {StatusCode} - {Body}", response.StatusCode, responseBody);
+            throw new Exception($"OpenRouter API returned {response.StatusCode}. Ensure your API key is valid.");
         }
 
         using var doc = JsonDocument.Parse(responseBody);
         var text = doc.RootElement
-            .GetProperty("candidates")[0]
+            .GetProperty("choices")[0]
+            .GetProperty("message")
             .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
             .GetString();
 
-        return text ?? throw new Exception("Empty response from Gemini API.");
+        return text ?? throw new Exception("Empty response from OpenRouter API.");
     }
 
     // ---- AI Feature Implementations ----

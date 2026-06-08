@@ -1,5 +1,5 @@
 export interface LoginRequest {
-  email: string;
+  emailOrUsername: string;
   password: string;
 }
 
@@ -195,6 +195,26 @@ export interface ProviderQueryParams {
   pageSize?: number;
 }
 
+export interface ErrorLogQueryParams {
+  search?: string;
+  method?: string;
+  statusCode?: number;
+  sortBy?: string;
+  sortOrder?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AuditLogQueryParams {
+  search?: string;
+  actionType?: string;
+  entityName?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface AuthState {
   token: string | null;
   username: string | null;
@@ -319,4 +339,28 @@ export interface AiRecommendation {
   reason: string;
   priority: string;
   generatedAt: string;
+}
+
+export interface ReportProvider {
+  id: number;
+  name: string;
+  specialty: string;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  status: string;
+  averageScore: number;
+  totalEvaluations: number;
+  lastEvaluationDate: string | null;
+  createdAt: string;
+}
+
+export interface ReportData {
+  generatedAt: string;
+  kpis: DashboardKpi;
+  monthlyTrends: MonthlyTrend[];
+  riskDistribution: RiskDistribution[];
+  topProviders: ProviderPerformance[];
+  bottomProviders: ProviderPerformance[];
+  allProviders: ReportProvider[];
 }

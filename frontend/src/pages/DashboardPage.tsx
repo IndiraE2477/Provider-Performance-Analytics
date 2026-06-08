@@ -104,11 +104,8 @@ const ProviderDashboardView: React.FC<{
             <div className="value" style={{ fontSize: 18 }}>
               {fullName}
             </div>
-            <div
-              className="change"
-              style={{ display: "flex", alignItems: "center", gap: 4 }}
-            >
-              <MdLocationOn />
+            <div className="change">
+              <MdLocationOn style={{ verticalAlign: "middle" }} />{" "}
               {data.location || "N/A"}
             </div>
           </div>
@@ -247,7 +244,7 @@ const ProviderDashboardView: React.FC<{
 
       <div className="chart-card" style={{ marginTop: 24 }}>
         <h3>
-          <MdHistory />
+          <MdHistory style={{ verticalAlign: "middle", marginRight: 8 }} />
           Recent Evaluations
         </h3>
         <div className="table-container">
@@ -616,7 +613,7 @@ const AdminManagerDashboard: React.FC<{
       {(isAdmin || isManager) && (
         <div className="chart-card" style={{ marginTop: 4 }}>
           <h3>
-            <MdPeople />
+            <MdPeople style={{ verticalAlign: "middle", marginRight: 8 }} />
             Recent Providers Overview
           </h3>
           <div
@@ -676,7 +673,7 @@ const AdminManagerDashboard: React.FC<{
       {isAdmin && adminSummary && adminSummary.recentActivity.length > 0 && (
         <div className="chart-card" style={{ marginTop: 24 }}>
           <h3>
-            <MdHistory />
+            <MdHistory style={{ verticalAlign: "middle", marginRight: 8 }} />
             Recent Activity
           </h3>
           <div className="table-container">

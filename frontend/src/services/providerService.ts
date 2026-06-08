@@ -38,4 +38,19 @@ export const providerService = {
     const response = await api.get<ApiResponse<string[]>>('/providers/specialties');
     return response.data.data;
   },
+
+  downloadReport: async (id: number, providerName: string): Promise<void> => {
+    const response = await api.get(`/providers/${id}/report`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Provider_Report_${providerName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
 };

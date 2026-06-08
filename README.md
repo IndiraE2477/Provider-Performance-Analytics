@@ -342,11 +342,13 @@ npm run test:report
 
 ## Demo Credentials
 
-| Role    | Username | Password  |
-| ------- | -------- | --------- |
-| Admin   | admin    | Admin@123 |
-| Manager | manager  | Admin@123 |
-| Viewer  | viewer   | Admin@123 |
+Login supports both **username** and **email**.
+
+| Role    | Username | Email                          | Password  |
+| ------- | -------- | ------------------------------ | --------- |
+| Admin   | admin    | admin@provideranalytics.com    | Admin@123 |
+| Manager | manager  | manager@provideranalytics.com  | Admin@123 |
+| Viewer  | viewer   | viewer@provideranalytics.com   | Admin@123 |
 
 ### Role Permissions Matrix
 

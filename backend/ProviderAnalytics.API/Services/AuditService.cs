@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ProviderAnalytics.API.DTOs;
 using ProviderAnalytics.API.Entities;
 using ProviderAnalytics.API.Repositories.Interfaces;
 using ProviderAnalytics.API.Services.Interfaces;
@@ -34,5 +35,24 @@ public class AuditService : IAuditService
         _logger.LogInformation(
             "Audit: {ActionType} on {EntityName} (ID: {EntityId}) by {ModifiedBy}",
             actionType, entityName, entityId, modifiedBy);
+    }
+
+    public async Task<PagedResult<AuditLogDto>> GetAuditLogsPagedAsync(AuditLogQueryParams queryParams)
+    {
+        var pagedResult = await _auditLogRepository.GetPagedAsync(queryParams);
+        return new PagedResult<AuditLogDto>
+        {
+            Items = pagedResult.Items.Select(a => new AuditLogDto(
+                a.Id,
+                a.EntityName,
+                a.ActionType,
+                a.EntityId,
+                a.ModifiedBy,
+                a.Timestamp
+            )).ToList(),
+            TotalCount = pagedResult.TotalCount,
+            Page = pagedResult.Page,
+            PageSize = pagedResult.PageSize
+        };
     }
 }

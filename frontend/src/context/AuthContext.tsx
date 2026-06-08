@@ -209,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 transition: "color 0.3s",
               }}
             >
-              {countdown}
+              {countdown}s
             </div>
             <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 20 }}>
               You will be logged out automatically.

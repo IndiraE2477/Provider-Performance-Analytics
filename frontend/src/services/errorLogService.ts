@@ -1,9 +1,9 @@
 import api from './api';
-import type { ErrorLog, ApiResponse } from '../types';
+import type { ErrorLog, PagedResult, ApiResponse, ErrorLogQueryParams } from '../types';
 
 export const errorLogService = {
-  getErrorLogs: async (): Promise<ErrorLog[]> => {
-    const response = await api.get<ApiResponse<ErrorLog[]>>('/errorlogs');
+  getErrorLogs: async (params: ErrorLogQueryParams): Promise<PagedResult<ErrorLog>> => {
+    const response = await api.get<ApiResponse<PagedResult<ErrorLog>>>('/errorlogs', { params });
     return response.data.data;
   },
 };
