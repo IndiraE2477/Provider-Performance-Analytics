@@ -125,7 +125,9 @@ const ReportsPage: React.FC = () => {
             <MdAssessment color="#7c3aed" size={24} />
           </div>
           <div className="kpi-info">
-            <div className="kpi-value">{report.kpis.averageScore.toFixed(2)}</div>
+            <div className="kpi-value">
+              {report.kpis.averageScore.toFixed(2)}
+            </div>
             <div className="kpi-label">Average Score</div>
           </div>
         </div>
@@ -159,7 +161,14 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 24 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr",
+          gap: 24,
+          marginBottom: 24,
+        }}
+      >
         {/* Monthly Trends Chart */}
         <div className="card">
           <h3 style={{ marginBottom: 16 }}>Monthly Performance Trends</h3>
@@ -169,7 +178,11 @@ const ReportsPage: React.FC = () => {
               <XAxis dataKey="month" />
               <YAxis domain={[0, 5]} />
               <Tooltip />
-              <Bar dataKey="averageScore" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="averageScore"
+                fill="#4f46e5"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -200,9 +213,18 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Top & Bottom Providers */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 24,
+          marginBottom: 24,
+        }}
+      >
         <div className="card">
-          <h3 style={{ marginBottom: 16, color: "#22c55e" }}>Top 5 Providers</h3>
+          <h3 style={{ marginBottom: 16, color: "#22c55e" }}>
+            Top 5 Providers
+          </h3>
           <table className="data-table">
             <thead>
               <tr>
@@ -215,7 +237,12 @@ const ReportsPage: React.FC = () => {
               {report.topProviders.map((p, i) => (
                 <tr key={i}>
                   <td>{p.providerName}</td>
-                  <td style={{ color: scoreColor(p.averageScore), fontWeight: 600 }}>
+                  <td
+                    style={{
+                      color: scoreColor(p.averageScore),
+                      fontWeight: 600,
+                    }}
+                  >
                     {p.averageScore.toFixed(2)}
                   </td>
                   <td>{statusBadge(p.status)}</td>
@@ -225,7 +252,9 @@ const ReportsPage: React.FC = () => {
           </table>
         </div>
         <div className="card">
-          <h3 style={{ marginBottom: 16, color: "#ef4444" }}>Bottom 5 Providers</h3>
+          <h3 style={{ marginBottom: 16, color: "#ef4444" }}>
+            Bottom 5 Providers
+          </h3>
           <table className="data-table">
             <thead>
               <tr>
@@ -238,7 +267,12 @@ const ReportsPage: React.FC = () => {
               {report.bottomProviders.map((p, i) => (
                 <tr key={i}>
                   <td>{p.providerName}</td>
-                  <td style={{ color: scoreColor(p.averageScore), fontWeight: 600 }}>
+                  <td
+                    style={{
+                      color: scoreColor(p.averageScore),
+                      fontWeight: 600,
+                    }}
+                  >
                     {p.averageScore.toFixed(2)}
                   </td>
                   <td>{statusBadge(p.status)}</td>
@@ -273,7 +307,12 @@ const ReportsPage: React.FC = () => {
                   <td>{p.specialty}</td>
                   <td>{p.location || "—"}</td>
                   <td>{statusBadge(p.status)}</td>
-                  <td style={{ color: scoreColor(p.averageScore), fontWeight: 600 }}>
+                  <td
+                    style={{
+                      color: scoreColor(p.averageScore),
+                      fontWeight: 600,
+                    }}
+                  >
                     {p.averageScore.toFixed(2)}
                   </td>
                   <td>{p.totalEvaluations}</td>

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAppSelector } from '../store';
-import { selectAuth } from '../store/slices/authSlice';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAppSelector } from "../store";
+import { selectAuth } from "../store/slices/authSlice";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

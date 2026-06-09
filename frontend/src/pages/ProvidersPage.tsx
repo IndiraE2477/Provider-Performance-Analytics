@@ -14,9 +14,7 @@ import {
 import { toast } from "react-toastify";
 import { providerService } from "../services/providerService";
 import { useAppSelector, useAppDispatch } from "../store";
-import {
-  selectHasRole,
-} from "../store/slices/authSlice";
+import { selectHasRole } from "../store/slices/authSlice";
 import {
   selectProviderFilters,
   setFilters,
@@ -24,11 +22,7 @@ import {
   setPage,
   setSorting,
 } from "../store/slices/providerSlice";
-import type {
-  CreateProvider,
-  UpdateProvider,
-  Provider,
-} from "../types";
+import type { CreateProvider, UpdateProvider, Provider } from "../types";
 
 const statusBadge = (status: string) => {
   const cls =
@@ -189,12 +183,20 @@ const ProvidersPage: React.FC = () => {
     }
   };
 
-  const handleSort = useCallback((field: string) => {
-    dispatch(setSorting({
-      sortBy: field,
-      sortOrder: queryParams.sortBy === field && queryParams.sortOrder === "asc" ? "desc" : "asc",
-    }));
-  }, [dispatch, queryParams.sortBy, queryParams.sortOrder]);
+  const handleSort = useCallback(
+    (field: string) => {
+      dispatch(
+        setSorting({
+          sortBy: field,
+          sortOrder:
+            queryParams.sortBy === field && queryParams.sortOrder === "asc"
+              ? "desc"
+              : "asc",
+        }),
+      );
+    },
+    [dispatch, queryParams.sortBy, queryParams.sortOrder],
+  );
 
   const SortIcon = ({ field }: { field: string }) => {
     if (queryParams.sortBy !== field) return null;
@@ -232,9 +234,7 @@ const ProvidersPage: React.FC = () => {
               className="form-control"
               placeholder="Search providers..."
               value={queryParams.search || ""}
-              onChange={(e) =>
-                dispatch(setSearch(e.target.value))
-              }
+              onChange={(e) => dispatch(setSearch(e.target.value))}
             />
           </div>
           <select
@@ -242,7 +242,9 @@ const ProvidersPage: React.FC = () => {
             style={{ width: 180 }}
             value={queryParams.specialty || ""}
             onChange={(e) =>
-              dispatch(setFilters({ specialty: e.target.value || undefined, page: 1 }))
+              dispatch(
+                setFilters({ specialty: e.target.value || undefined, page: 1 }),
+              )
             }
           >
             <option value="">All Specialties</option>
@@ -257,7 +259,9 @@ const ProvidersPage: React.FC = () => {
             style={{ width: 150 }}
             value={queryParams.status || ""}
             onChange={(e) =>
-              dispatch(setFilters({ status: e.target.value || undefined, page: 1 }))
+              dispatch(
+                setFilters({ status: e.target.value || undefined, page: 1 }),
+              )
             }
           >
             <option value="">All Status</option>
@@ -375,9 +379,7 @@ const ProvidersPage: React.FC = () => {
                 <button
                   className="pagination-btn"
                   disabled={!data.hasPrevious}
-                  onClick={() =>
-                    dispatch(setPage((queryParams.page || 1) - 1))
-                  }
+                  onClick={() => dispatch(setPage((queryParams.page || 1) - 1))}
                 >
                   Previous
                 </button>
@@ -385,9 +387,7 @@ const ProvidersPage: React.FC = () => {
                   <button
                     key={num}
                     className={`pagination-btn ${num === data.page ? "active" : ""}`}
-                    onClick={() =>
-                      dispatch(setPage(num))
-                    }
+                    onClick={() => dispatch(setPage(num))}
                   >
                     {num}
                   </button>
@@ -395,9 +395,7 @@ const ProvidersPage: React.FC = () => {
                 <button
                   className="pagination-btn"
                   disabled={!data.hasNext}
-                  onClick={() =>
-                    dispatch(setPage((queryParams.page || 1) + 1))
-                  }
+                  onClick={() => dispatch(setPage((queryParams.page || 1) + 1))}
                 >
                   Next
                 </button>

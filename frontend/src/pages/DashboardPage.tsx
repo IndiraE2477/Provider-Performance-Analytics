@@ -83,7 +83,7 @@ const ProviderDashboardView: React.FC<{
         <div>
           <h1>My Dashboard</h1>
           <p style={{ color: "#64748b", fontSize: 14, margin: "4px 0 0" }}>
-            Welcome back, {fullName}
+            Welcome, {fullName}
             <span
               className={`badge ${statusColor}`}
               style={{ marginLeft: 10, fontSize: 11 }}
@@ -371,7 +371,7 @@ const AdminManagerDashboard: React.FC<{
                 : "Dashboard"}
           </h1>
           <p style={{ color: "#64748b", fontSize: 14, margin: "4px 0 0" }}>
-            Welcome back, {fullName}
+            Welcome, {fullName}
             <span
               className={`badge ${isAdmin ? "badge-active" : isManager ? "badge-at-risk" : "badge-inactive"}`}
               style={{ marginLeft: 10, fontSize: 11 }}

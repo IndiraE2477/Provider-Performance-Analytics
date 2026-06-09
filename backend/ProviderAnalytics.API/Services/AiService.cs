@@ -28,7 +28,11 @@ public class AiService : IAiService
         _context = context;
         _logger = logger;
         _httpClient = httpClient;
-        _apiKey = configuration["OpenAI:ApiKey"] ?? configuration["VertexAI:ApiKey"] ?? "";
+
+        var openAiKey = configuration["OpenAI:ApiKey"];
+        var vertexKey = configuration["VertexAI:ApiKey"];
+        _apiKey = !string.IsNullOrWhiteSpace(openAiKey) ? openAiKey : (!string.IsNullOrWhiteSpace(vertexKey) ? vertexKey : "");
+
         _modelId = configuration["OpenAI:Model"] ?? "google/gemini-2.0-flash-001";
         _projectId = configuration["VertexAI:ProjectId"] ?? "";
         _location = configuration["VertexAI:Location"] ?? "us-central1";
@@ -39,7 +43,7 @@ public class AiService : IAiService
     private async Task<string> CallGeminiAsync(string prompt)
     {
         if (string.IsNullOrWhiteSpace(_apiKey))
-            throw new InvalidOperationException("OpenAI:ApiKey is not configured in appsettings.json.");
+            throw new InvalidOperationException("AI API key is not configured. Set either OpenAI:ApiKey or VertexAI:ApiKey in appsettings.json.");
 
         var url = "https://openrouter.ai/api/v1/chat/completions";
 

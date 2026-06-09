@@ -1,16 +1,23 @@
-import React from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
-import { MdSearch, MdNotifications, MdSettings } from 'react-icons/md';
-import Sidebar from './Sidebar';
-import { useAppSelector } from '../store';
-import { selectAuth } from '../store/slices/authSlice';
+import React, { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { MdSearch, MdNotifications } from "react-icons/md";
+import Sidebar from "./Sidebar";
+import { useAppSelector } from "../store";
+import { selectAuth } from "../store/slices/authSlice";
 
 const Layout: React.FC = () => {
-  const { fullName, role } = useAppSelector(selectAuth);
+  const { isAuthenticated } = useAppSelector(selectAuth);
   const navigate = useNavigate();
-  const initials = fullName
-    ? fullName.split(' ').map(n => n[0]).join('').toUpperCase()
-    : '??';
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!isAuthenticated) {
+        navigate("/login", { replace: true });
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="app-layout">
@@ -28,16 +35,6 @@ const Layout: React.FC = () => {
               <MdNotifications />
               <span className="notification-dot" />
             </button>
-            <button className="navbar-icon-btn" title="Settings">
-              <MdSettings />
-            </button>
-            <div className="navbar-user" onClick={() => navigate('/profile')} title="My Profile">
-              <div className="avatar">{initials}</div>
-              <div>
-                <div className="user-name">{fullName}</div>
-                <div className="user-role">{role}</div>
-              </div>
-            </div>
           </div>
         </div>
         <div className="content-area">

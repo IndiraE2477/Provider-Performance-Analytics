@@ -265,7 +265,7 @@ const RegisterPage: React.FC = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={formik.isSubmitting}
+            disabled={formik.isSubmitting || !formik.isValid || !formik.dirty}
           >
             {formik.isSubmitting ? "Creating account..." : "Create Account"}
           </button>
